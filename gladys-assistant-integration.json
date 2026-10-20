@@ -1,177 +1,900 @@
 {
   "manifest_version": 1,
   "type": "device",
-  "name": "Demo Devices Template",
+  "name": "Icinga",
   "description": {
-    "en": "Starter template showing sensors, a switch, a dimmable light and a smart plug.",
-    "fr": "Template de démarrage : capteurs, interrupteur, lampe variable et prise connectée."
+    "en": "Your Icinga 2 hosts and services in Gladys, with scenes when a host goes down or a service fails.",
+    "fr": "Vos hôtes et services Icinga 2 dans Gladys, et des scènes quand un hôte tombe ou un service échoue.",
+    "de": "Deine Icinga-2-Hosts und -Services in Gladys, mit Szenen bei Host-Ausfällen und Service-Problemen.",
+    "es": "Sus hosts y servicios de Icinga 2 en Gladys, con escenas cuando un host cae o falla un servicio."
   },
   "version": "1.0.0",
-  "docker_image": "ghcr.io/gladysassistant/integration-template-js:1.0.0",
+  "docker_image": "ghcr.io/guim31/gladys-icinga:1.0.0",
   "gladys_version": ">=5.1.0",
-  "cover_image": "https://raw.githubusercontent.com/GladysAssistant/integration-template-js/master/cover.png",
-  "categories": ["lighting", "security", "environment"],
-  "transports": ["local", "cloud"],
+  "cover_image": "https://raw.githubusercontent.com/guim31/gladys-icinga/main/cover.png",
+  "categories": ["network"],
+  "transports": ["local"],
   "config_schema": [
     {
       "key": "intro",
       "type": "section",
-      "label": { "en": "Getting started", "fr": "Pour commencer" },
+      "label": {
+        "en": "Your Icinga 2",
+        "fr": "Votre Icinga 2",
+        "de": "Dein Icinga 2",
+        "es": "Su Icinga 2"
+      },
       "description": {
-        "en": "The demo weather station reads real data from the free Open-Meteo API: pick the coordinates to observe. No account, no API key.",
-        "fr": "La station météo de démonstration lit de vraies données via l'API gratuite Open-Meteo : choisissez les coordonnées à observer. Pas de compte, pas de clé d'API."
+        "en": "On the Icinga 2 server, add an ApiUser object (api-users.conf) with the permissions objects/query/Host, objects/query/Service, status/query and, to acknowledge, actions/acknowledge-problem. Then add the hosts from the Discover tab: scene triggers work for every host, added or not.",
+        "fr": "Sur le serveur Icinga 2, ajoutez un objet ApiUser (api-users.conf) avec les permissions objects/query/Host, objects/query/Service, status/query et, pour acquitter, actions/acknowledge-problem. Ajoutez ensuite les hôtes depuis l'onglet Découverte : les déclencheurs valent pour tous.",
+        "de": "Lege auf dem Icinga-2-Server ein ApiUser-Objekt (api-users.conf) mit den Berechtigungen objects/query/Host, objects/query/Service, status/query und zum Quittieren actions/acknowledge-problem an. Lege die Hosts dann im Tab „Entdecken“ an: Die Auslöser gelten für alle Hosts.",
+        "es": "En el servidor Icinga 2, añada un objeto ApiUser (api-users.conf) con los permisos objects/query/Host, objects/query/Service, status/query y, para reconocer, actions/acknowledge-problem. Después añada los hosts desde la pestaña Descubrir: los disparadores valen para todos."
       },
       "links": [
         {
-          "url": "https://open-meteo.com/en/docs",
-          "label": { "en": "Open-Meteo documentation", "fr": "Documentation Open-Meteo" }
+          "url": "https://github.com/guim31/gladys-icinga/blob/main/docs/en.md",
+          "label": {
+            "en": "Setup guide",
+            "fr": "Guide d'installation",
+            "de": "Installationsanleitung",
+            "es": "Guía de instalación"
+          }
+        },
+        {
+          "url": "https://icinga.com/docs/icinga-2/latest/doc/12-icinga2-api/#authentication",
+          "label": {
+            "en": "Icinga 2 API users",
+            "fr": "Utilisateurs d'API d'Icinga 2",
+            "de": "API-Benutzer von Icinga 2",
+            "es": "Usuarios de API de Icinga 2"
+          }
         }
       ]
     },
     {
-      "key": "latitude",
-      "type": "number",
-      "label": { "en": "Latitude", "fr": "Latitude" },
-      "description": {
-        "en": "Latitude used for the demo weather sensor.",
-        "fr": "Latitude utilisée par le capteur météo de démonstration."
+      "key": "icinga_url",
+      "type": "string",
+      "label": {
+        "en": "Address",
+        "fr": "Adresse",
+        "de": "Adresse",
+        "es": "Dirección"
       },
-      "placeholder": { "en": "e.g. 48.8566", "fr": "ex. 48.8566" },
-      "required": true,
-      "default": 48.8566,
-      "min": -90,
-      "max": 90
+      "description": {
+        "en": "The address of the Icinga 2 server; https:// and port 5665 unless you type others.",
+        "fr": "L'adresse du serveur Icinga 2 ; https:// et port 5665 sauf si vous en saisissez d'autres.",
+        "de": "Die Adresse des Icinga-2-Servers; https:// und Port 5665, außer du gibst andere ein.",
+        "es": "La dirección del servidor Icinga 2; https:// y puerto 5665 salvo que introduzca otros."
+      },
+      "placeholder": {
+        "en": "e.g. 192.168.1.2",
+        "fr": "ex. 192.168.1.2",
+        "de": "z. B. 192.168.1.2",
+        "es": "p. ej. 192.168.1.2"
+      },
+      "required": true
     },
     {
-      "key": "longitude",
-      "type": "number",
-      "label": { "en": "Longitude", "fr": "Longitude" },
-      "description": {
-        "en": "Longitude used for the demo weather sensor.",
-        "fr": "Longitude utilisée par le capteur météo de démonstration."
+      "key": "username",
+      "type": "string",
+      "label": {
+        "en": "API user",
+        "fr": "Utilisateur d'API",
+        "de": "API-Benutzer",
+        "es": "Usuario de API"
       },
-      "placeholder": { "en": "e.g. 2.3522", "fr": "ex. 2.3522" },
-      "required": true,
-      "default": 2.3522,
-      "min": -180,
-      "max": 180
+      "placeholder": {
+        "en": "e.g. gladys",
+        "fr": "ex. gladys",
+        "de": "z. B. gladys",
+        "es": "p. ej. gladys"
+      },
+      "required": true
     },
     {
-      "key": "unit",
+      "key": "password",
+      "type": "secret",
+      "label": {
+        "en": "Password",
+        "fr": "Mot de passe",
+        "de": "Passwort",
+        "es": "Contraseña"
+      },
+      "description": {
+        "en": "The password of the ApiUser object. Never use the root user: give only the permissions above.",
+        "fr": "Le mot de passe de l'objet ApiUser. Pas l'utilisateur root : seulement les permissions ci-dessus.",
+        "de": "Das Passwort des ApiUser-Objekts. Nicht den Benutzer root: nur die Berechtigungen oben.",
+        "es": "La contraseña del objeto ApiUser. No el usuario root: solo los permisos de arriba."
+      },
+      "required": true
+    },
+    {
+      "key": "host_groups",
+      "type": "string",
+      "label": {
+        "en": "Host groups (optional)",
+        "fr": "Groupes d'hôtes (facultatif)",
+        "de": "Hostgruppen (optional)",
+        "es": "Grupos de hosts (opcional)"
+      },
+      "description": {
+        "en": "Names of host groups, separated by commas: a host in one of them is kept. Empty: every host the API user sees.",
+        "fr": "Noms de groupes d'hôtes, séparés par des virgules : un hôte de l'un d'eux est retenu. Vide : tous les hôtes que l'utilisateur voit.",
+        "de": "Namen von Hostgruppen, durch Kommas getrennt: Ein Host in einer davon wird übernommen. Leer: alle Hosts, die der Benutzer sieht.",
+        "es": "Nombres de grupos de hosts, separados por comas: se toma un host de uno de ellos. Vacío: todos los hosts que ve el usuario."
+      },
+      "placeholder": {
+        "en": "e.g. homelab, linux-servers",
+        "fr": "ex. homelab, linux-servers",
+        "de": "z. B. homelab, linux-servers",
+        "es": "p. ej. homelab, linux-servers"
+      },
+      "required": false
+    },
+    {
+      "key": "options",
+      "type": "section",
+      "label": {
+        "en": "Options",
+        "fr": "Options",
+        "de": "Optionen",
+        "es": "Opciones"
+      }
+    },
+    {
+      "key": "poll_interval",
       "type": "select",
-      "label": { "en": "Temperature unit", "fr": "Unité de température" },
+      "label": {
+        "en": "Refresh interval",
+        "fr": "Intervalle de rafraîchissement",
+        "de": "Aktualisierungsintervall",
+        "es": "Intervalo de actualización"
+      },
+      "description": {
+        "en": "How often Icinga is read: two or three API requests each time.",
+        "fr": "Fréquence de lecture d'Icinga : deux ou trois requêtes d'API à chaque fois.",
+        "de": "Wie oft Icinga gelesen wird: jedes Mal zwei oder drei API-Anfragen.",
+        "es": "Con qué frecuencia se lee Icinga: dos o tres peticiones de API cada vez."
+      },
       "required": false,
-      "default": "celsius",
+      "default": "60",
       "options": [
-        { "value": "celsius", "label": { "en": "Celsius", "fr": "Celsius" } },
-        { "value": "fahrenheit", "label": { "en": "Fahrenheit", "fr": "Fahrenheit" } }
+        {
+          "value": "30",
+          "label": {
+            "en": "30 seconds",
+            "fr": "30 secondes",
+            "de": "30 Sekunden",
+            "es": "30 segundos"
+          }
+        },
+        {
+          "value": "60",
+          "label": {
+            "en": "1 minute",
+            "fr": "1 minute",
+            "de": "1 Minute",
+            "es": "1 minuto"
+          }
+        },
+        {
+          "value": "120",
+          "label": {
+            "en": "2 minutes",
+            "fr": "2 minutes",
+            "de": "2 Minuten",
+            "es": "2 minutos"
+          }
+        },
+        {
+          "value": "300",
+          "label": {
+            "en": "5 minutes",
+            "fr": "5 minutes",
+            "de": "5 Minuten",
+            "es": "5 minutos"
+          }
+        }
       ]
     },
     {
-      "key": "poll_frequency",
-      "type": "number",
-      "label": { "en": "Refresh interval (s)", "fr": "Intervalle de rafraîchissement (s)" },
+      "key": "allow_acknowledge",
+      "type": "boolean",
+      "label": {
+        "en": "Allow acknowledging from scenes",
+        "fr": "Autoriser l'acquittement depuis les scènes",
+        "de": "Quittieren aus Szenen erlauben",
+        "es": "Permitir reconocer desde escenas"
+      },
       "description": {
-        "en": "How often sensors are polled, in seconds (one minute minimum).",
-        "fr": "Fréquence d'interrogation des capteurs, en secondes (une minute minimum)."
+        "en": "Untick to turn off the \"Acknowledge the problems of a host\" scene action.",
+        "fr": "Décochez pour désactiver l'action de scène « Acquitter les problèmes d'un hôte ».",
+        "de": "Deaktiviere es, um die Szenen-Aktion „Probleme eines Hosts quittieren“ auszuschalten.",
+        "es": "Desmarque para desactivar la acción de escena «Reconocer los problemas de un host»."
       },
       "required": false,
-      "default": 300,
-      "min": 60,
-      "max": 3600
+      "default": true
+    },
+    {
+      "key": "allow_self_signed",
+      "type": "boolean",
+      "label": {
+        "en": "Accept self-signed certificates",
+        "fr": "Accepter les certificats auto-signés",
+        "de": "Selbstsignierte Zertifikate akzeptieren",
+        "es": "Aceptar certificados autofirmados"
+      },
+      "description": {
+        "en": "Icinga signs its API certificate with its own CA: keep it ticked unless your certificate is trusted.",
+        "fr": "Icinga signe le certificat de son API avec sa propre autorité : laissez coché sauf certificat reconnu.",
+        "de": "Icinga signiert das Zertifikat seiner API mit der eigenen CA: Lass es aktiviert, außer dein Zertifikat ist vertrauenswürdig.",
+        "es": "Icinga firma el certificado de su API con su propia CA: déjelo marcado salvo que su certificado sea de confianza."
+      },
+      "required": false,
+      "default": true
+    },
+    {
+      "key": "language",
+      "type": "select",
+      "label": {
+        "en": "Language of the names",
+        "fr": "Langue des noms",
+        "de": "Sprache der Namen",
+        "es": "Idioma de los nombres"
+      },
+      "description": {
+        "en": "Language of the feature names (set when a device is added) and of the scene results.",
+        "fr": "Langue des noms des fonctionnalités (fixés à l'ajout d'un appareil) et des résultats de scène.",
+        "de": "Sprache der Funktionsnamen (beim Hinzufügen eines Geräts festgelegt) und der Szenen-Ergebnisse.",
+        "es": "Idioma de los nombres de las funciones (fijados al añadir un dispositivo) y de los resultados de escena."
+      },
+      "required": false,
+      "default": "fr",
+      "options": [
+        {
+          "value": "en",
+          "label": {
+            "en": "English",
+            "fr": "Anglais",
+            "de": "Englisch",
+            "es": "Inglés"
+          }
+        },
+        {
+          "value": "fr",
+          "label": {
+            "en": "French",
+            "fr": "Français",
+            "de": "Französisch",
+            "es": "Francés"
+          }
+        },
+        {
+          "value": "de",
+          "label": {
+            "en": "German",
+            "fr": "Allemand",
+            "de": "Deutsch",
+            "es": "Alemán"
+          }
+        },
+        {
+          "value": "es",
+          "label": {
+            "en": "Spanish",
+            "fr": "Espagnol",
+            "de": "Spanisch",
+            "es": "Español"
+          }
+        }
+      ]
     }
   ],
   "actions": [
     {
-      "key": "test_weather",
-      "label": { "en": "Test the weather provider", "fr": "Tester le fournisseur météo" },
+      "key": "test_connection",
+      "label": {
+        "en": "Test the connection",
+        "fr": "Tester la connexion",
+        "de": "Verbindung testen",
+        "es": "Probar la conexión"
+      },
       "timeout_seconds": 30
-    },
-    {
-      "key": "identify",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
-      "fields": [
-        {
-          "key": "device",
-          "type": "select",
-          "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
-          "required": true
-        }
-      ]
     }
   ],
   "scene_triggers": [
     {
-      "key": "motion_detected",
-      "label": { "en": "Motion detected", "fr": "Mouvement détecté" },
+      "key": "host_down",
+      "label": {
+        "en": "A host goes down",
+        "fr": "Un hôte tombe",
+        "de": "Ein Host fällt aus",
+        "es": "Un host cae"
+      },
       "description": {
-        "en": "A demo motion sensor saw a person or an animal move.",
-        "fr": "Un détecteur de démonstration a vu bouger une personne ou un animal."
+        "en": "An Icinga host goes DOWN or UNREACHABLE, HARD state (outside a downtime).",
+        "fr": "Un hôte Icinga passe DOWN ou UNREACHABLE, état HARD (hors maintenance).",
+        "de": "Ein Icinga-Host wird DOWN oder UNREACHABLE, Zustand HARD (außerhalb einer Wartungszeit).",
+        "es": "Un host de Icinga pasa a DOWN o UNREACHABLE, estado HARD (fuera de un mantenimiento)."
       },
       "fields": [
         {
           "key": "device",
-          "type": "select",
+          "type": "multi_select",
           "source": "devices",
-          "label": { "en": "Sensor", "fr": "Détecteur" }
+          "label": {
+            "en": "Hosts (empty: any)",
+            "fr": "Hôtes (vide : n'importe lequel)",
+            "de": "Hosts (leer: beliebig)",
+            "es": "Hosts (vacío: cualquiera)"
+          },
+          "description": {
+            "en": "Only the devices added to Gladys can be chosen; empty works for every host.",
+            "fr": "Seuls les appareils ajoutés à Gladys se choisissent ; vide vaut pour tous les hôtes.",
+            "de": "Nur die in Gladys angelegten Geräte sind wählbar; leer gilt für alle Hosts.",
+            "es": "Solo se pueden elegir los dispositivos añadidos a Gladys; vacío vale para todos los hosts."
+          }
+        }
+      ],
+      "variables": [
+        {
+          "key": "host",
+          "type": "string",
+          "label": {
+            "en": "Host name",
+            "fr": "Nom de l'hôte",
+            "de": "Hostname",
+            "es": "Nombre del host"
+          }
         },
         {
-          "key": "target",
+          "key": "state_name",
+          "type": "string",
+          "label": {
+            "en": "State",
+            "fr": "État",
+            "de": "Zustand",
+            "es": "Estado"
+          }
+        }
+      ]
+    },
+    {
+      "key": "host_up",
+      "label": {
+        "en": "A host is back up",
+        "fr": "Un hôte revient",
+        "de": "Ein Host ist wieder da",
+        "es": "Un host vuelve"
+      },
+      "description": {
+        "en": "An Icinga host announced down is UP again.",
+        "fr": "Un hôte Icinga signalé tombé est de nouveau UP.",
+        "de": "Ein als ausgefallen gemeldeter Icinga-Host ist wieder UP.",
+        "es": "Un host de Icinga notificado como caído vuelve a estar UP."
+      },
+      "fields": [
+        {
+          "key": "device",
           "type": "multi_select",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" },
+          "source": "devices",
+          "label": {
+            "en": "Hosts (empty: any)",
+            "fr": "Hôtes (vide : n'importe lequel)",
+            "de": "Hosts (leer: beliebig)",
+            "es": "Hosts (vacío: cualquiera)"
+          },
+          "description": {
+            "en": "Only the devices added to Gladys can be chosen; empty works for every host.",
+            "fr": "Seuls les appareils ajoutés à Gladys se choisissent ; vide vaut pour tous les hôtes.",
+            "de": "Nur die in Gladys angelegten Geräte sind wählbar; leer gilt für alle Hosts.",
+            "es": "Solo se pueden elegir los dispositivos añadidos a Gladys; vacío vale para todos los hosts."
+          }
+        }
+      ],
+      "variables": [
+        {
+          "key": "host",
+          "type": "string",
+          "label": {
+            "en": "Host name",
+            "fr": "Nom de l'hôte",
+            "de": "Hostname",
+            "es": "Nombre del host"
+          }
+        },
+        {
+          "key": "duration_minutes",
+          "type": "number",
+          "label": {
+            "en": "Duration (minutes)",
+            "fr": "Durée (minutes)",
+            "de": "Dauer (Minuten)",
+            "es": "Duración (minutos)"
+          }
+        }
+      ]
+    },
+    {
+      "key": "service_problem",
+      "label": {
+        "en": "A service has a problem",
+        "fr": "Un service pose problème",
+        "de": "Ein Service hat ein Problem",
+        "es": "Un servicio tiene un problema"
+      },
+      "description": {
+        "en": "A service enters WARNING, CRITICAL or UNKNOWN, HARD state, or changes between them (outside a downtime).",
+        "fr": "Un service passe WARNING, CRITICAL ou UNKNOWN, état HARD, ou change entre eux (hors maintenance).",
+        "de": "Ein Service wird WARNING, CRITICAL oder UNKNOWN, Zustand HARD, oder wechselt zwischen ihnen (außerhalb einer Wartungszeit).",
+        "es": "Un servicio pasa a WARNING, CRITICAL o UNKNOWN, estado HARD, o cambia entre ellos (fuera de un mantenimiento)."
+      },
+      "fields": [
+        {
+          "key": "device",
+          "type": "multi_select",
+          "source": "devices",
+          "label": {
+            "en": "Hosts (empty: any)",
+            "fr": "Hôtes (vide : n'importe lequel)",
+            "de": "Hosts (leer: beliebig)",
+            "es": "Hosts (vacío: cualquiera)"
+          },
+          "description": {
+            "en": "Only the devices added to Gladys can be chosen; empty works for every host.",
+            "fr": "Seuls les appareils ajoutés à Gladys se choisissent ; vide vaut pour tous les hôtes.",
+            "de": "Nur die in Gladys angelegten Geräte sind wählbar; leer gilt für alle Hosts.",
+            "es": "Solo se pueden elegir los dispositivos añadidos a Gladys; vacío vale para todos los hosts."
+          }
+        },
+        {
+          "key": "state",
+          "type": "multi_select",
+          "label": {
+            "en": "States (empty: any)",
+            "fr": "États (vide : n'importe lequel)",
+            "de": "Zustände (leer: beliebig)",
+            "es": "Estados (vacío: cualquiera)"
+          },
+          "description": {
+            "en": "The new state. For \"CRITICAL only\", choose CRITICAL.",
+            "fr": "Le nouvel état. Pour « CRITICAL seulement », choisissez CRITICAL.",
+            "de": "Der neue Zustand. Für „nur CRITICAL“ wähle CRITICAL.",
+            "es": "El nuevo estado. Para «solo CRITICAL», elija CRITICAL."
+          },
           "options": [
-            { "value": "person", "label": { "en": "Person", "fr": "Personne" } },
-            { "value": "animal", "label": { "en": "Animal", "fr": "Animal" } }
+            {
+              "value": "1",
+              "label": {
+                "en": "WARNING",
+                "fr": "WARNING",
+                "de": "WARNING",
+                "es": "WARNING"
+              }
+            },
+            {
+              "value": "2",
+              "label": {
+                "en": "CRITICAL",
+                "fr": "CRITICAL",
+                "de": "CRITICAL",
+                "es": "CRITICAL"
+              }
+            },
+            {
+              "value": "3",
+              "label": {
+                "en": "UNKNOWN",
+                "fr": "UNKNOWN",
+                "de": "UNKNOWN",
+                "es": "UNKNOWN"
+              }
+            }
           ]
         }
       ],
       "variables": [
         {
-          "key": "target",
+          "key": "host",
           "type": "string",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" }
+          "label": {
+            "en": "Host name",
+            "fr": "Nom de l'hôte",
+            "de": "Hostname",
+            "es": "Nombre del host"
+          }
+        },
+        {
+          "key": "service",
+          "type": "string",
+          "label": {
+            "en": "Service",
+            "fr": "Service",
+            "de": "Service",
+            "es": "Servicio"
+          }
+        },
+        {
+          "key": "state_name",
+          "type": "string",
+          "label": {
+            "en": "State",
+            "fr": "État",
+            "de": "Zustand",
+            "es": "Estado"
+          }
+        },
+        {
+          "key": "output",
+          "type": "string",
+          "label": {
+            "en": "Check output",
+            "fr": "Sortie du check",
+            "de": "Check-Ausgabe",
+            "es": "Salida del check"
+          }
+        }
+      ]
+    },
+    {
+      "key": "service_recovered",
+      "label": {
+        "en": "A service is OK again",
+        "fr": "Un service revient OK",
+        "de": "Ein Service ist wieder OK",
+        "es": "Un servicio vuelve a OK"
+      },
+      "description": {
+        "en": "A service announced in problem is OK again.",
+        "fr": "Un service signalé en problème est de nouveau OK.",
+        "de": "Ein als Problem gemeldeter Service ist wieder OK.",
+        "es": "Un servicio notificado con problema vuelve a estar OK."
+      },
+      "fields": [
+        {
+          "key": "device",
+          "type": "multi_select",
+          "source": "devices",
+          "label": {
+            "en": "Hosts (empty: any)",
+            "fr": "Hôtes (vide : n'importe lequel)",
+            "de": "Hosts (leer: beliebig)",
+            "es": "Hosts (vacío: cualquiera)"
+          },
+          "description": {
+            "en": "Only the devices added to Gladys can be chosen; empty works for every host.",
+            "fr": "Seuls les appareils ajoutés à Gladys se choisissent ; vide vaut pour tous les hôtes.",
+            "de": "Nur die in Gladys angelegten Geräte sind wählbar; leer gilt für alle Hosts.",
+            "es": "Solo se pueden elegir los dispositivos añadidos a Gladys; vacío vale para todos los hosts."
+          }
+        },
+        {
+          "key": "state",
+          "type": "multi_select",
+          "label": {
+            "en": "States (empty: any)",
+            "fr": "États (vide : n'importe lequel)",
+            "de": "Zustände (leer: beliebig)",
+            "es": "Estados (vacío: cualquiera)"
+          },
+          "description": {
+            "en": "The last problem state announced.",
+            "fr": "Le dernier état de problème signalé.",
+            "de": "Der zuletzt gemeldete Problemzustand.",
+            "es": "El último estado de problema notificado."
+          },
+          "options": [
+            {
+              "value": "1",
+              "label": {
+                "en": "WARNING",
+                "fr": "WARNING",
+                "de": "WARNING",
+                "es": "WARNING"
+              }
+            },
+            {
+              "value": "2",
+              "label": {
+                "en": "CRITICAL",
+                "fr": "CRITICAL",
+                "de": "CRITICAL",
+                "es": "CRITICAL"
+              }
+            },
+            {
+              "value": "3",
+              "label": {
+                "en": "UNKNOWN",
+                "fr": "UNKNOWN",
+                "de": "UNKNOWN",
+                "es": "UNKNOWN"
+              }
+            }
+          ]
+        }
+      ],
+      "variables": [
+        {
+          "key": "host",
+          "type": "string",
+          "label": {
+            "en": "Host name",
+            "fr": "Nom de l'hôte",
+            "de": "Hostname",
+            "es": "Nombre del host"
+          }
+        },
+        {
+          "key": "service",
+          "type": "string",
+          "label": {
+            "en": "Service",
+            "fr": "Service",
+            "de": "Service",
+            "es": "Servicio"
+          }
+        },
+        {
+          "key": "state_name",
+          "type": "string",
+          "label": {
+            "en": "Last problem state",
+            "fr": "Dernier état de problème",
+            "de": "Letzter Problemzustand",
+            "es": "Último estado de problema"
+          }
+        },
+        {
+          "key": "duration_minutes",
+          "type": "number",
+          "label": {
+            "en": "Duration (minutes)",
+            "fr": "Durée (minutes)",
+            "de": "Dauer (Minuten)",
+            "es": "Duración (minutos)"
+          }
+        }
+      ]
+    },
+    {
+      "key": "icinga_unreachable",
+      "label": {
+        "en": "Icinga no longer answers",
+        "fr": "Icinga ne répond plus",
+        "de": "Icinga antwortet nicht mehr",
+        "es": "Icinga ya no responde"
+      },
+      "description": {
+        "en": "The Icinga 2 REST API fails to answer twice in a row.",
+        "fr": "L'API REST d'Icinga 2 ne répond pas deux fois de suite.",
+        "de": "Die REST-API von Icinga 2 antwortet zweimal hintereinander nicht.",
+        "es": "La API REST de Icinga 2 no responde dos veces seguidas."
+      },
+      "variables": [
+        {
+          "key": "address",
+          "type": "string",
+          "label": {
+            "en": "Address",
+            "fr": "Adresse",
+            "de": "Adresse",
+            "es": "Dirección"
+          }
+        },
+        {
+          "key": "error",
+          "type": "string",
+          "label": {
+            "en": "Error",
+            "fr": "Erreur",
+            "de": "Fehler",
+            "es": "Error"
+          }
         }
       ]
     }
   ],
   "scene_actions": [
     {
-      "key": "identify_device",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
-      "description": {
-        "en": "Make a device signal itself (the demo light blinks).",
-        "fr": "Fait se signaler un appareil (la lampe de démonstration clignote)."
+      "key": "acknowledge_host_problems",
+      "label": {
+        "en": "Acknowledge the problems of a host",
+        "fr": "Acquitter les problèmes d'un hôte",
+        "de": "Probleme eines Hosts quittieren",
+        "es": "Reconocer los problemas de un host"
       },
-      "timeout_seconds": 15,
+      "description": {
+        "en": "Acknowledges in Icinga the host problem and its services in problem, with a comment.",
+        "fr": "Acquitte dans Icinga le problème de l'hôte et ses services en problème, avec un commentaire.",
+        "de": "Quittiert in Icinga das Host-Problem und seine Services mit Problem, mit einem Kommentar.",
+        "es": "Reconoce en Icinga el problema del host y sus servicios con problemas, con un comentario."
+      },
+      "timeout_seconds": 60,
       "fields": [
         {
           "key": "device",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
+          "label": {
+            "en": "Host",
+            "fr": "Hôte",
+            "de": "Host",
+            "es": "Host"
+          },
           "required": true
+        },
+        {
+          "key": "message",
+          "type": "string",
+          "label": {
+            "en": "Comment (optional)",
+            "fr": "Commentaire (facultatif)",
+            "de": "Kommentar (optional)",
+            "es": "Comentario (opcional)"
+          },
+          "description": {
+            "en": "Empty: \"Acknowledged from Gladys\".",
+            "fr": "Vide : « Acquitté depuis Gladys ».",
+            "de": "Leer: „In Gladys quittiert“.",
+            "es": "Vacío: «Reconocido desde Gladys»."
+          },
+          "required": false
         }
       ],
       "outputs": [
         {
-          "key": "signalled",
-          "type": "boolean",
-          "label": { "en": "Device signalled", "fr": "Appareil signalé" }
+          "key": "acknowledged",
+          "type": "number",
+          "label": {
+            "en": "Problems acknowledged",
+            "fr": "Problèmes acquittés",
+            "de": "Quittierte Probleme",
+            "es": "Problemas reconocidos"
+          }
+        }
+      ]
+    },
+    {
+      "key": "get_problems",
+      "label": {
+        "en": "Read the problems",
+        "fr": "Lire les problèmes",
+        "de": "Probleme lesen",
+        "es": "Leer los problemas"
+      },
+      "description": {
+        "en": "Counts and lists the hosts down and services in problem, of one host or of all.",
+        "fr": "Compte et liste les hôtes tombés et les services en problème, d'un hôte ou de tous.",
+        "de": "Zählt und listet ausgefallene Hosts und Services mit Problem, eines Hosts oder aller.",
+        "es": "Cuenta y enumera los hosts caídos y los servicios con problemas, de un host o de todos."
+      },
+      "timeout_seconds": 30,
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Host (empty: all)",
+            "fr": "Hôte (vide : tous)",
+            "de": "Host (leer: alle)",
+            "es": "Host (vacío: todos)"
+          },
+          "required": false
+        }
+      ],
+      "outputs": [
+        {
+          "key": "count",
+          "type": "number",
+          "label": {
+            "en": "Problems",
+            "fr": "Problèmes",
+            "de": "Probleme",
+            "es": "Problemas"
+          }
+        },
+        {
+          "key": "unhandled",
+          "type": "number",
+          "label": {
+            "en": "Unhandled problems",
+            "fr": "Problèmes non traités",
+            "de": "Unbehandelte Probleme",
+            "es": "Problemas sin gestionar"
+          }
+        },
+        {
+          "key": "hosts_down",
+          "type": "number",
+          "label": {
+            "en": "Hosts down",
+            "fr": "Hôtes DOWN",
+            "de": "Hosts DOWN",
+            "es": "Hosts DOWN"
+          }
+        },
+        {
+          "key": "services_critical",
+          "type": "number",
+          "label": {
+            "en": "Services CRITICAL",
+            "fr": "Services CRITICAL",
+            "de": "Services CRITICAL",
+            "es": "Servicios CRITICAL"
+          }
+        },
+        {
+          "key": "services_warning",
+          "type": "number",
+          "label": {
+            "en": "Services WARNING",
+            "fr": "Services WARNING",
+            "de": "Services WARNING",
+            "es": "Servicios WARNING"
+          }
+        },
+        {
+          "key": "services_unknown",
+          "type": "number",
+          "label": {
+            "en": "Services UNKNOWN",
+            "fr": "Services UNKNOWN",
+            "de": "Services UNKNOWN",
+            "es": "Servicios UNKNOWN"
+          }
+        },
+        {
+          "key": "names",
+          "type": "string",
+          "label": {
+            "en": "Problems (host: problem)",
+            "fr": "Problèmes (hôte : problème)",
+            "de": "Probleme (Host: Problem)",
+            "es": "Problemas (host: problema)"
+          }
         }
       ]
     }
   ],
   "widgets": [
     {
-      "key": "demo_status",
-      "label": { "en": "Demo status", "fr": "État de la démo" },
-      "description": {
-        "en": "Live temperature and plug power, plug connection and observed location.",
-        "fr": "Température et puissance en direct, connexion de la prise, position observée."
+      "key": "problems",
+      "label": {
+        "en": "Icinga problems",
+        "fr": "Problèmes Icinga",
+        "de": "Icinga-Probleme",
+        "es": "Problemas de Icinga"
       },
-      "icon": "activity",
-      "action_timeout_seconds": 15
+      "description": {
+        "en": "Hosts down and services in problem, the most serious first.",
+        "fr": "Hôtes tombés et services en problème, les plus graves d'abord.",
+        "de": "Ausgefallene Hosts und Services mit Problem, die schwersten zuerst.",
+        "es": "Hosts caídos y servicios con problemas, los más graves primero."
+      },
+      "icon": "alert-triangle",
+      "action_timeout_seconds": 30,
+      "settings": [
+        {
+          "key": "hosts",
+          "type": "multi_select",
+          "source": "devices",
+          "label": {
+            "en": "Hosts (empty: all)",
+            "fr": "Hôtes (vide : tous)",
+            "de": "Hosts (leer: alle)",
+            "es": "Hosts (vacío: todos)"
+          },
+          "description": {
+            "en": "Only the devices added to Gladys can be chosen.",
+            "fr": "Seuls les appareils ajoutés à Gladys se choisissent.",
+            "de": "Nur die in Gladys angelegten Geräte sind wählbar.",
+            "es": "Solo se pueden elegir los dispositivos añadidos a Gladys."
+          },
+          "required": false
+        }
+      ]
     }
   ]
 }
