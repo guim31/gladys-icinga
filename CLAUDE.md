@@ -256,6 +256,12 @@ l'API et ses pièges changent.
   « Unauthorized », 403 « Missing permission: <permission> » (`permission`), 404 « No objects
   found. » pour une action sans objet (traité comme 0 résultat). Une réponse non JSON (Icinga Web
   sur 80/443) : `not_icinga`. Un filtre mal encodé dans l'URL : 500 « Unhandled exception ».
+- **Piège payé : `+` dans l'URL**. Icinga ne décode pas un `+` en espace : `URLSearchParams`
+  envoie `service.state+!=+0`, qui ne trouve rien, et Icinga répond **404 « No objects found. »**,
+  la même réponse que quand tous les services sont OK. Résultat : zéro service en problème, sans
+  erreur (vu en réel, invisible avec un faux trop poli). Encoder chaque paramètre par
+  `encodeURIComponent` (`%20`) ; le faux de test décode comme Icinga et répond 404 à un filtre
+  inconnu ou à une liste vide.
 - **Lecture** : `GET objects/hosts` et `GET objects/services?filter=service.state != 0` avec
   `attrs` répétés. `status/IcingaApplication` donne la version (`v2.16.5`) mais exige
   `status/query` : sans elle, version inconnue, pas d'erreur. Aucun hôte visible : erreur
@@ -292,3 +298,19 @@ pilotés par variables (`max_check_attempts = 2` pour voir SOFT puis HARD), un h
 vers une adresse de documentation (DOWN), un hôte derrière lui par `Dependency` (UNREACHABLE), un
 hôte en downtime avec ses services, un hôte et un service sans check actif (PENDING). Réponses
 gardées dans `test/fixtures/icinga/icinga-2.16.5.json` (l'hôte d'exemple de l'image retiré).
+
+Image de l'intégration avec les contraintes du bac à sable (`--cap-drop ALL --security-opt
+no-new-privileges --read-only --memory 256m --pids-limit 256`, volume `/data`, aucun port publié) :
+
+- Sans Gladys : reconnexion du SDK, pas de plantage, aucun secret dans les logs, ~19 Mo au repos,
+  arrêt propre sur SIGTERM (code 0).
+- Faux Gladys du SDK dans le conteneur verrouillé, contre le vrai Icinga : découverte (8
+  appareils), états, « Tester la connexion », widget, `get_problems` ; `service_problem` seulement
+  au passage HARD (rien à l'état SOFT), `service_recovered`, `host_down`, `host_up` ; acquittement
+  de l'hôte et de son service (commentaires d'auteur « Gladys » relus dans Icinga), puis 0 au
+  second appel ; mot de passe refusé (`auth`), utilisateur sans `actions/acknowledge-problem`
+  (403, message clair) ni `status/query` (version inconnue, lecture normale), `http://`
+  (`ECONNRESET` → `https_required`), port fermé (`unreachable`), certificat strict
+  (`SELF_SIGNED_CERT_IN_CHAIN` → `tls`).
+- Non vérifié en réel : Icinga 2 avant 2.16, cluster à plusieurs zones, proxy inverse,
+  permissions à `filter`.

@@ -137,7 +137,11 @@ export class IcingaClient {
     if (!this.username || !this.password) {
       throw new IcingaError(ERROR_KINDS.CREDENTIALS_MISSING, 'No user or password configured');
     }
-    const query = new URLSearchParams(params).toString();
+    // Not URLSearchParams: it writes a space as `+`, which Icinga does not
+    // decode (`service.state+!=+0` matches nothing: 404 "No objects found").
+    const query = params
+      .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+      .join('&');
     const headers = {
       authorization: `Basic ${Buffer.from(`${this.username}:${this.password}`).toString('base64')}`,
       // Icinga refuses a POST without it.

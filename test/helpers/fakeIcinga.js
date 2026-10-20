@@ -99,14 +99,21 @@ export class FakeIcinga {
     }
     const target = new URL(url);
     const path = target.pathname.slice(new URL(API_URL).pathname.length);
-    this.calls.push({ method, path, params: [...target.searchParams] });
+    // Decoded as Icinga does: `%XX` only, a `+` stays a `+`.
+    const params = target.search
+      .slice(1)
+      .split('&')
+      .filter(Boolean)
+      .map((pair) => pair.split('=').map((part) => decodeURIComponent(part)));
+    const param = (key) => params.find(([name]) => name === key)?.[1] ?? null;
+    this.calls.push({ method, path, params });
     const expected = `Basic ${Buffer.from(`${USERNAME}:${PASSWORD}`).toString('base64')}`;
     if (headers.authorization !== expected) {
       return json(401, answer('unauthorized'));
     }
     const forbidden = (permission) =>
       json(403, { error: 403, status: `Missing permission: ${permission}` });
-    const attrs = target.searchParams.getAll('attrs');
+    const attrs = params.filter(([name]) => name === 'attrs').map(([, value]) => value);
     const pick = (row) => Object.fromEntries(attrs.map((attr) => [attr, row[attr]]));
     const results = (type, list, nameOf) =>
       json(200, {
@@ -134,11 +141,15 @@ export class FakeIcinga {
       return results('Host', this.hosts, (row) => row.name);
     }
     if (method === 'GET' && path === '/objects/services') {
-      const filter = target.searchParams.get('filter');
-      const list =
-        filter === 'service.state != 0'
-          ? this.services.filter((service) => service.state !== 0)
-          : this.services;
+      const filter = param('filter');
+      if (filter !== null && filter !== 'service.state != 0') {
+        // What Icinga answers to `service.state+!=+0`.
+        return json(404, answer('acknowledge_no_object'));
+      }
+      const list = filter ? this.services.filter((service) => service.state !== 0) : this.services;
+      if (list.length === 0) {
+        return json(404, answer('acknowledge_no_object')); // every service OK: "No objects found."
+      }
       return results('Service', list, (row) => `${row.host_name}!${row.name}`);
     }
     if (method === 'POST' && path === '/actions/acknowledge-problem') {
