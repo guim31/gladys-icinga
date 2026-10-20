@@ -1,0 +1,520 @@
+{
+  "_comment": "Real answers of Icinga 2 v2.16.5 (icinga/icinga2 Docker image, 20/10/2026), API user with objects/query/Host, objects/query/Service, actions/acknowledge-problem, status/query. Hosts and services of the test setup (dummy checks, one host behind a down parent, one host in a downtime, one never checked); the sample host of the image left out. See README.md.",
+  "status": {
+    "request": "GET /v1/status/IcingaApplication",
+    "http_status": 200,
+    "response": {
+      "results": [
+        {
+          "name": "IcingaApplication",
+          "perfdata": [],
+          "status": {
+            "icingaapplication": {
+              "app": {
+                "enable_event_handlers": true,
+                "enable_flapping": true,
+                "enable_host_checks": true,
+                "enable_notifications": true,
+                "enable_perfdata": true,
+                "enable_service_checks": true,
+                "environment": "",
+                "node_name": "icinga-core",
+                "pid": 35,
+                "program_start": 1792500537.872704,
+                "version": "v2.16.5"
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "hosts": {
+    "request": "GET /v1/objects/hosts?attrs=…",
+    "http_status": 200,
+    "response": {
+      "results": [
+        {
+          "attrs": {
+            "acknowledgement": 0,
+            "display_name": "behindhost",
+            "downtime_depth": 0,
+            "groups": ["office"],
+            "last_check": 1792500656.720276,
+            "last_reachable": false,
+            "last_state_change": 0,
+            "name": "behindhost",
+            "state": 1,
+            "state_type": 1
+          },
+          "joins": {},
+          "meta": {},
+          "name": "behindhost",
+          "type": "Host"
+        },
+        {
+          "attrs": {
+            "acknowledgement": 0,
+            "display_name": "router",
+            "downtime_depth": 0,
+            "groups": ["homelab", "office"],
+            "last_check": 1792500656.720277,
+            "last_reachable": true,
+            "last_state_change": 1792500539.158907,
+            "name": "router",
+            "state": 0,
+            "state_type": 1
+          },
+          "joins": {},
+          "meta": {},
+          "name": "router",
+          "type": "Host"
+        },
+        {
+          "attrs": {
+            "acknowledgement": 0,
+            "display_name": "outside",
+            "downtime_depth": 1,
+            "groups": [],
+            "last_check": 1792500656.720275,
+            "last_reachable": true,
+            "last_state_change": 0,
+            "name": "outside",
+            "state": 1,
+            "state_type": 1
+          },
+          "joins": {},
+          "meta": {},
+          "name": "outside",
+          "type": "Host"
+        },
+        {
+          "attrs": {
+            "acknowledgement": 0,
+            "display_name": "deadhost",
+            "downtime_depth": 0,
+            "groups": ["office"],
+            "last_check": 1792500657.566532,
+            "last_reachable": true,
+            "last_state_change": 0,
+            "name": "deadhost",
+            "state": 1,
+            "state_type": 1
+          },
+          "joins": {},
+          "meta": {},
+          "name": "deadhost",
+          "type": "Host"
+        },
+        {
+          "attrs": {
+            "acknowledgement": 0,
+            "display_name": "NAS",
+            "downtime_depth": 0,
+            "groups": ["homelab"],
+            "last_check": 1792500650.061376,
+            "last_reachable": true,
+            "last_state_change": 1792500539.427702,
+            "name": "nas",
+            "state": 0,
+            "state_type": 1
+          },
+          "joins": {},
+          "meta": {},
+          "name": "nas",
+          "type": "Host"
+        },
+        {
+          "attrs": {
+            "acknowledgement": 0,
+            "display_name": "newhost",
+            "downtime_depth": 0,
+            "groups": ["homelab"],
+            "last_check": -1,
+            "last_reachable": true,
+            "last_state_change": 1792500537.872704,
+            "name": "newhost",
+            "state": 1,
+            "state_type": 0
+          },
+          "joins": {},
+          "meta": {},
+          "name": "newhost",
+          "type": "Host"
+        }
+      ]
+    }
+  },
+  "services": {
+    "request": "GET /v1/objects/services?attrs=…&filter=service.state != 0",
+    "http_status": 200,
+    "response": {
+      "results": [
+        {
+          "attrs": {
+            "acknowledgement": 2,
+            "display_name": "Disk /volume1",
+            "downtime_depth": 0,
+            "host_name": "nas",
+            "last_check": 1792500659.390184,
+            "last_check_result": {
+              "active": true,
+              "check_source": "icinga-core",
+              "command": "dummy",
+              "execution_end": 1792500659.39018,
+              "execution_start": 1792500659.39018,
+              "exit_status": 1,
+              "output": "DISK WARNING - 85% used",
+              "performance_data": [],
+              "previous_hard_state": 99,
+              "schedule_end": 1792500659.390184,
+              "schedule_start": 1792500659.39,
+              "scheduling_source": "icinga-core",
+              "state": 1,
+              "ttl": 0,
+              "type": "CheckResult",
+              "vars_after": {
+                "attempt": 1,
+                "reachable": true,
+                "state": 1,
+                "state_type": 1
+              },
+              "vars_before": {
+                "attempt": 1,
+                "reachable": true,
+                "state": 1,
+                "state_type": 1
+              }
+            },
+            "last_state_change": 1792500546.250015,
+            "name": "disk",
+            "state": 1,
+            "state_type": 1
+          },
+          "joins": {},
+          "meta": {},
+          "name": "nas!disk",
+          "type": "Service"
+        },
+        {
+          "attrs": {
+            "acknowledgement": 0,
+            "display_name": "http",
+            "downtime_depth": 1,
+            "host_name": "outside",
+            "last_check": 1792500650.061349,
+            "last_check_result": {
+              "active": true,
+              "check_source": "icinga-core",
+              "command": "dummy",
+              "execution_end": 1792500650.061346,
+              "execution_start": 1792500650.061346,
+              "exit_status": 2,
+              "output": "Connection refused",
+              "performance_data": [],
+              "previous_hard_state": 99,
+              "schedule_end": 1792500650.061349,
+              "schedule_start": 1792500650.06,
+              "scheduling_source": "icinga-core",
+              "state": 2,
+              "ttl": 0,
+              "type": "CheckResult",
+              "vars_after": {
+                "attempt": 1,
+                "reachable": false,
+                "state": 2,
+                "state_type": 1
+              },
+              "vars_before": {
+                "attempt": 1,
+                "reachable": false,
+                "state": 2,
+                "state_type": 1
+              }
+            },
+            "last_state_change": 1792500541.200678,
+            "name": "http",
+            "state": 2,
+            "state_type": 1
+          },
+          "joins": {},
+          "meta": {},
+          "name": "outside!http",
+          "type": "Service"
+        },
+        {
+          "attrs": {
+            "acknowledgement": 0,
+            "display_name": "temperature",
+            "downtime_depth": 0,
+            "host_name": "nas",
+            "last_check": 1792500654.920194,
+            "last_check_result": {
+              "active": true,
+              "check_source": "icinga-core",
+              "command": "dummy",
+              "execution_end": 1792500654.92019,
+              "execution_start": 1792500654.92019,
+              "exit_status": 3,
+              "output": "Sensor not found",
+              "performance_data": [],
+              "previous_hard_state": 99,
+              "schedule_end": 1792500654.920194,
+              "schedule_start": 1792500654.92,
+              "scheduling_source": "icinga-core",
+              "state": 3,
+              "ttl": 0,
+              "type": "CheckResult",
+              "vars_after": {
+                "attempt": 1,
+                "reachable": true,
+                "state": 3,
+                "state_type": 1
+              },
+              "vars_before": {
+                "attempt": 1,
+                "reachable": true,
+                "state": 3,
+                "state_type": 1
+              }
+            },
+            "last_state_change": 0,
+            "name": "temperature",
+            "state": 3,
+            "state_type": 1
+          },
+          "joins": {},
+          "meta": {},
+          "name": "nas!temperature",
+          "type": "Service"
+        },
+        {
+          "attrs": {
+            "acknowledgement": 0,
+            "display_name": "ping",
+            "downtime_depth": 0,
+            "host_name": "behindhost",
+            "last_check": 1792500659.390336,
+            "last_check_result": {
+              "active": true,
+              "check_source": "icinga-core",
+              "command": "dummy",
+              "execution_end": 1792500659.390333,
+              "execution_start": 1792500659.390333,
+              "exit_status": 2,
+              "output": "Unreachable",
+              "performance_data": [],
+              "previous_hard_state": 99,
+              "schedule_end": 1792500659.390336,
+              "schedule_start": 1792500659.39,
+              "scheduling_source": "icinga-core",
+              "state": 2,
+              "ttl": 0,
+              "type": "CheckResult",
+              "vars_after": {
+                "attempt": 1,
+                "reachable": false,
+                "state": 2,
+                "state_type": 1
+              },
+              "vars_before": {
+                "attempt": 1,
+                "reachable": false,
+                "state": 2,
+                "state_type": 1
+              }
+            },
+            "last_state_change": 1792500539.824193,
+            "name": "ping",
+            "state": 2,
+            "state_type": 1
+          },
+          "joins": {},
+          "meta": {},
+          "name": "behindhost!ping",
+          "type": "Service"
+        },
+        {
+          "attrs": {
+            "acknowledgement": 0,
+            "display_name": "Nightly backup",
+            "downtime_depth": 0,
+            "host_name": "nas",
+            "last_check": 1792500654.920194,
+            "last_check_result": {
+              "active": true,
+              "check_source": "icinga-core",
+              "command": "dummy",
+              "execution_end": 1792500654.92019,
+              "execution_start": 1792500654.92019,
+              "exit_status": 2,
+              "output": "Last backup 3 days ago",
+              "performance_data": [],
+              "previous_hard_state": 99,
+              "schedule_end": 1792500654.920194,
+              "schedule_start": 1792500654.9199998,
+              "scheduling_source": "icinga-core",
+              "state": 2,
+              "ttl": 0,
+              "type": "CheckResult",
+              "vars_after": {
+                "attempt": 1,
+                "reachable": true,
+                "state": 2,
+                "state_type": 1
+              },
+              "vars_before": {
+                "attempt": 1,
+                "reachable": true,
+                "state": 2,
+                "state_type": 1
+              }
+            },
+            "last_state_change": 1792500541.792216,
+            "name": "backup",
+            "state": 2,
+            "state_type": 1
+          },
+          "joins": {},
+          "meta": {},
+          "name": "nas!backup",
+          "type": "Service"
+        },
+        {
+          "attrs": {
+            "acknowledgement": 0,
+            "display_name": "ping4",
+            "downtime_depth": 0,
+            "host_name": "router",
+            "last_check": 1792500641.248305,
+            "last_check_result": {
+              "active": true,
+              "check_source": "icinga-core",
+              "command": [
+                "/usr/lib/nagios/plugins/check_ping",
+                "-4",
+                "-H",
+                "192.0.2.1",
+                "-c",
+                "200,15%",
+                "-w",
+                "100,5%"
+              ],
+              "execution_end": 1792500641.248246,
+              "execution_start": 1792500631.238725,
+              "exit_status": 2,
+              "output": "PING CRITICAL - Packet loss = 100%",
+              "performance_data": ["rta=U;100.000000;200.000000;;", "pl=100%;5;15;0;"],
+              "previous_hard_state": 99,
+              "schedule_end": 1792500641.248305,
+              "schedule_start": 1792500631.238221,
+              "scheduling_source": "icinga-core",
+              "state": 2,
+              "ttl": 0,
+              "type": "CheckResult",
+              "vars_after": {
+                "attempt": 4,
+                "reachable": true,
+                "state": 2,
+                "state_type": 0
+              },
+              "vars_before": {
+                "attempt": 3,
+                "reachable": true,
+                "state": 2,
+                "state_type": 0
+              }
+            },
+            "last_state_change": 1792500564.528342,
+            "name": "ping4",
+            "state": 2,
+            "state_type": 0
+          },
+          "joins": {},
+          "meta": {},
+          "name": "router!ping4",
+          "type": "Service"
+        },
+        {
+          "attrs": {
+            "acknowledgement": 0,
+            "display_name": "load",
+            "downtime_depth": 0,
+            "host_name": "newhost",
+            "last_check": -1,
+            "last_check_result": null,
+            "last_state_change": 1792500537.872704,
+            "name": "load",
+            "state": 3,
+            "state_type": 0
+          },
+          "joins": {},
+          "meta": {},
+          "name": "newhost!load",
+          "type": "Service"
+        }
+      ]
+    }
+  },
+  "acknowledge_ok": {
+    "http_status": 200,
+    "response": {
+      "results": [
+        {
+          "code": 200,
+          "status": "Successfully acknowledged problem for object 'nas!backup'."
+        }
+      ]
+    }
+  },
+  "acknowledge_host_up": {
+    "http_status": 409,
+    "response": {
+      "results": [
+        {
+          "code": 409,
+          "status": "Host router is UP."
+        }
+      ]
+    }
+  },
+  "acknowledge_already": {
+    "http_status": 409,
+    "response": {
+      "results": [
+        {
+          "code": 409,
+          "status": "Service nas!backup is already acknowledged."
+        }
+      ]
+    }
+  },
+  "acknowledge_no_object": {
+    "http_status": 404,
+    "response": {
+      "error": 404,
+      "status": "No objects found."
+    }
+  },
+  "acknowledge_forbidden": {
+    "http_status": 403,
+    "response": {
+      "error": 403,
+      "status": "Missing permission: actions/acknowledge-problem"
+    }
+  },
+  "unauthorized": {
+    "http_status": 401,
+    "response": {
+      "error": 401,
+      "status": "Unauthorized. Please check your user credentials."
+    }
+  },
+  "status_forbidden": {
+    "http_status": 403,
+    "response": {
+      "error": 403,
+      "status": "Missing permission: status/query"
+    }
+  }
+}

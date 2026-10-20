@@ -1,67 +1,214 @@
-# Template de démonstration
+# Icinga
 
-Ceci est la documentation utilisateur de l'intégration. Gladys ré-héberge ce
-fichier et affiche un lien **Documentation** permanent vers lui dans l'écran
-de configuration (dans la langue de l'utilisateur, avec l'anglais en repli) —
-c'est au moment de configurer que l'utilisateur en a le plus besoin. Gardez
-les courtes indications d'accueil dans les blocs `section` du `config_schema`
-du manifest ; mettez ici le pas-à-pas détaillé (captures d'écran, dépannage…).
+Votre supervision [Icinga 2](https://icinga.com/) dans Gladys : chaque hôte
+devient un appareil (UP, services WARNING, CRITICAL et UNKNOWN, problèmes non
+traités, acquitté, maintenance), un appareil « Icinga » résume l'ensemble, et
+vos scènes réagissent quand un hôte tombe ou qu'un service échoue — une
+lumière rouge quand le NAS tombe, un message quand une sauvegarde passe
+CRITICAL. Une scène peut aussi acquitter les problèmes d'un hôte, et un widget
+du tableau de bord liste les problèmes en cours.
 
-## Ce que vous obtenez
+L'intégration lit l'API REST d'Icinga 2 (port 5665) sur votre réseau local,
+avec un utilisateur d'API. Rien ne passe par un cloud.
 
-Six appareils de démonstration apparaissent après l'installation : une
-station météo (vraies données Open-Meteo), un interrupteur, une lampe
-variable, une prise connectée avec mesure de puissance, un détecteur de
-mouvement et une caméra.
+Testé contre un vrai Icinga 2.16 (image Docker officielle `icinga/icinga2`,
+checks `dummy` forcés en WARNING, CRITICAL et UNKNOWN, un hôte DOWN, un hôte
+UNREACHABLE derrière lui, une maintenance, un acquittement, un hôte jamais
+vérifié). Vos retours sont les bienvenus :
+[github.com/guim31/gladys-icinga/issues](https://github.com/guim31/gladys-icinga/issues).
 
-## Configuration
+## Ce qu'il vous faut
 
-1. Ouvrez l'onglet **Configuration** de l'intégration.
-2. Renseignez la **latitude** et la **longitude** que la station météo de
-   démonstration doit observer (Paris par défaut), et choisissez votre unité
-   de température. L'**intervalle de rafraîchissement** règle la fréquence
-   de lecture de la station météo et de la puissance de la prise : toutes
-   les 5 minutes par défaut, toutes les minutes au plus.
-3. Enregistrez : les appareils apparaissent dans l'onglet **Découverte**,
-   prêts à être ajoutés.
+- Gladys Assistant 5.1.0 ou plus récent.
+- Icinga 2 avec son API REST activée (`icinga2 api setup`, fait par la plupart
+  des installations et par l'image Docker officielle), joignable depuis la
+  machine de Gladys sur le port 5665. Icinga Web et Icinga DB ne sont pas
+  nécessaires.
+- Un utilisateur d'API pour Gladys (un objet `ApiUser`), avec seulement les
+  permissions utiles.
 
-Le réglage **Préférer la connexion locale** pilote la prise de
-démonstration : elle affiche en badge le canal réellement utilisé (local ou
-cloud), avec un point orange quand elle fonctionne en mode dégradé (local
-refusé, bascule cloud).
+## Mise en route
 
-## Actions
+### 1. Créer un utilisateur d'API
 
-- **Tester le fournisseur météo** — effectue une requête en direct vers
-  Open-Meteo et affiche la température et l'humidité actuelles sous le
-  bouton.
-- **Identifier un appareil** — choisissez un de vos appareils dans la liste
-  et il se signale (la lampe de démonstration « clignote » dans les logs).
+Sur le serveur Icinga 2, ajoutez dans `/etc/icinga2/conf.d/api-users.conf` (ou
+tout autre fichier de configuration) :
 
-## Scènes
+```
+object ApiUser "gladys" {
+  password = "un-long-mot-de-passe-aleatoire"
+  permissions = [
+    "objects/query/Host",
+    "objects/query/Service",
+    "status/query",
+    "actions/acknowledge-problem",
+  ]
+}
+```
 
-L'intégration ajoute ses propres cartes à l'éditeur de scènes (Gladys 5.1
-ou plus récent), dans la catégorie **Intégrations** :
+`status/query` ne sert qu'à la version affichée par « Tester la connexion » :
+elle peut être omise. Omettez `actions/acknowledge-problem` si Gladys ne doit
+jamais acquitter. Vérifiez puis rechargez : `icinga2 daemon -C` et
+`systemctl reload icinga2`. N'utilisez pas l'utilisateur `root` créé par
+`icinga2 api setup` : il a tous les droits.
 
-- **Mouvement détecté** (déclencheur) — lance la scène quand un détecteur
-  de démonstration voit bouger quelque chose. Choisissez éventuellement le
-  détecteur et ce qui a bougé (personne, animal) ; laissés vides, toute
-  détection correspond. Les actions suivantes peuvent lire ce qui a bougé
-  avec `{{triggerEvent.data.target}}`.
-- **Identifier un appareil** (action) — fait se signaler l'appareil choisi.
-  Elle indique si l'appareil a pu se signaler, pour que les actions
-  suivantes puissent en dépendre.
+### 2. Configurer l'intégration
+
+Dans Gladys, ouvrez la configuration de l'intégration :
+
+- **Adresse** : l'adresse du serveur Icinga 2, ex. `192.168.1.2`. `https://`
+  et le port 5665 sont ajoutés sauf si vous en saisissez d'autres (ex.
+  `https://monitoring.example.com:443/icinga-api` derrière un proxy inverse).
+- **Utilisateur d'API** et **Mot de passe** : l'utilisateur de l'étape 1.
+- **Groupes d'hôtes (facultatif)** : des noms de groupes d'hôtes séparés par
+  des virgules, ex. `homelab, linux-servers` : un hôte de l'un d'eux est
+  retenu. Vide : tous les hôtes que l'utilisateur d'API voit.
+- **Intervalle de rafraîchissement** : de 30 secondes à 5 minutes (1 minute
+  par défaut).
+- **Autoriser l'acquittement depuis les scènes** : décochez pour désactiver
+  l'action d'acquittement.
+- **Accepter les certificats auto-signés** : Icinga signe le certificat de son
+  API avec sa propre autorité de certification, d'où la case cochée par
+  défaut. Ne la décochez que si votre certificat est reconnu (un proxy inverse
+  avec un certificat public).
+- **Langue des noms** : langue des noms des fonctionnalités et des résultats
+  de scène.
+
+Enregistrez, puis cliquez sur **Tester la connexion** : elle affiche la
+version d'Icinga, le nombre d'hôtes, d'hôtes DOWN et de services en problème.
+
+### 3. Ajouter les appareils
+
+Ouvrez l'onglet **Découverte** de l'intégration et ajoutez les hôtes à
+suivre, et l'appareil « Icinga » si vous voulez les totaux. Les déclencheurs de
+scène valent pour tous les hôtes, ajoutés à Gladys ou non.
+
+## Les appareils
+
+Chaque **hôte** (sous son nom d'affichage dans Icinga) :
+
+| Fonctionnalité        | Valeur                                                             |
+| --------------------- | ------------------------------------------------------------------ |
+| Hôte UP               | 1 UP, 0 DOWN ou UNREACHABLE ; vide tant que l'hôte est PENDING     |
+| Services WARNING      | nombre de services WARNING                                         |
+| Services CRITICAL     | nombre de services CRITICAL                                        |
+| Services UNKNOWN      | nombre de services UNKNOWN                                         |
+| Problèmes non traités | problèmes de l'hôte et des services ni acquittés ni en maintenance |
+| Hôte acquitté         | 1 tant que l'hôte est DOWN ou UNREACHABLE et son problème acquitté |
+| En maintenance        | 1 pendant une maintenance planifiée (downtime) de l'hôte           |
+
+L'appareil **Icinga** : Hôtes DOWN (DOWN ou UNREACHABLE), Services WARNING,
+Services CRITICAL, Services UNKNOWN et Problèmes non traités, sur les hôtes de
+la configuration.
+
+Un hôte est UNREACHABLE quand il est DOWN et qu'Icinga sait, par une
+dépendance, que son parent est tombé aussi. Les nombres de services comptent
+aussi les états qu'Icinga est encore en train de confirmer (SOFT), comme
+Icinga Web les affiche. Les valeurs ne sont envoyées à Gladys que lorsqu'elles
+changent, et toutes les 6 heures sinon.
 
 ## Tableau de bord
 
-Ajoutez le widget **État de la démo** à un tableau de bord : il affiche en
-direct la température de la station météo et la puissance de la prise du
-bureau, la connexion utilisée par la prise (en orange si dégradée) et la
-position observée. Son bouton **Identifier la lampe** fait se signaler la
-lampe de démonstration.
+Le widget **Problèmes Icinga** affiche trois tuiles — les hôtes DOWN, les
+services CRITICAL, les problèmes non traités — et les problèmes : hôtes DOWN,
+puis UNREACHABLE, puis services CRITICAL, UNKNOWN et WARNING, les plus récents
+d'abord. Chaque ligne donne le service et son état, l'hôte, ✓ une fois acquitté
+et ⏸ en maintenance. Dix lignes au plus. **Actualiser** relit Icinga. Dans ses
+réglages, choisissez des hôtes pour n'afficher que les leurs (vide : tous les
+hôtes).
+
+## Scènes
+
+### Déclencheurs
+
+- **Un hôte tombe** : un hôte passe DOWN ou UNREACHABLE. Filtre : hôtes
+  (vide : n'importe lequel). Variables : nom de l'hôte, état (DOWN,
+  UNREACHABLE). Un hôte qui passe de DOWN à UNREACHABLE n'est pas signalé deux
+  fois.
+- **Un hôte revient** : un hôte signalé tombé est de nouveau UP. Variables :
+  nom de l'hôte, durée en minutes.
+- **Un service pose problème** : un service passe WARNING, CRITICAL ou
+  UNKNOWN, ou change entre eux (de WARNING à CRITICAL, par exemple). Filtres :
+  hôtes, états (vide : n'importe lequel ; pour « CRITICAL seulement »,
+  choisissez CRITICAL). Variables : nom de l'hôte, service, état, sortie du
+  check (sa première ligne).
+- **Un service revient OK** : un service signalé en problème est de nouveau
+  OK. Filtres : hôtes, dernier état de problème signalé. Variables : nom de
+  l'hôte, service, dernier état de problème, durée en minutes.
+- **Icinga ne répond plus** : l'API REST ne répond pas deux fois de suite
+  (variables : adresse, erreur).
+
+Les problèmes déjà présents au démarrage de l'intégration ne sont pas
+signalés, mais leur fin l'est. Seuls les états confirmés (HARD) comptent : tant
+qu'Icinga refait un check (état SOFT, jusqu'à `max_check_attempts`), rien
+n'est signalé, Icinga ne notifiant pas non plus. Un changement survenu pendant
+un redémarrage de Gladys ou de l'intégration est signalé une fois à la lecture
+suivante. Un problème en maintenance (du service ou de son hôte) n'est pas
+signalé ; s'il est toujours là à la fin de la maintenance, il est signalé à ce
+moment-là.
+
+### Actions
+
+- **Acquitter les problèmes d'un hôte** : acquitte dans Icinga le problème de
+  l'hôte (DOWN, UNREACHABLE) et chacun de ses services en problème pas encore
+  acquitté, avec un commentaire (vide : « Acquitté depuis Gladys ») et l'auteur
+  « Gladys ». L'acquittement est persistant (jusqu'au retour à UP ou OK) et
+  n'envoie aucune notification. Renvoie le nombre acquitté. Désactivable par
+  « Autoriser l'acquittement depuis les scènes ».
+- **Lire les problèmes** : compte et liste les problèmes d'un hôte, ou de
+  tous, pour les actions suivantes : nombre, non traités, hôtes DOWN, services
+  CRITICAL, WARNING et UNKNOWN, et la liste « hôte : problème ».
+
+### Idées de scènes
+
+- **Une lumière rouge quand le NAS tombe** : déclencheur « Un hôte tombe »,
+  hôte NAS → passer la lampe du salon au rouge et envoyer
+  `{{triggerEvent.data.host}} : {{triggerEvent.data.state_name}}`.
+- **Seulement les services critiques** : déclencheur « Un service pose
+  problème », état CRITICAL → message `{{triggerEvent.data.host}} /
+{{triggerEvent.data.service}} : {{triggerEvent.data.output}}`.
+- **Rapport du matin** : chaque jour à 8 h, « Lire les problèmes » → envoyer
+  le nombre et la liste quand le nombre dépasse 0.
+- **Vu depuis le canapé** : un bouton du tableau de bord ou une télécommande
+  Zigbee lance « Acquitter les problèmes d'un hôte » sur le NAS.
 
 ## Dépannage
 
-L'intégration journalise tout ce qu'elle fait : consultez les logs de
-l'intégration depuis l'interface Gladys (ou `docker logs` sur l'hôte) avec
-`LOG_LEVEL=debug` pour le détail complet.
+- **« Utilisateur d'API ou mot de passe refusé »** : vérifiez l'objet
+  `ApiUser`, et qu'Icinga a été rechargé après son ajout.
+- **« Icinga ne répond pas »** : vérifiez l'adresse et le port 5665 depuis la
+  machine de Gladys (un pare-feu le ferme souvent). `localhost` désigne le
+  conteneur de l'intégration lui-même : utilisez l'adresse IP de la machine
+  d'Icinga.
+- **« Pas d'API Icinga 2 à cette adresse »** : autre chose y répond (Icinga Web
+  sur le port 80 ou 443, par exemple) : utilisez le port 5665.
+- **« L'API d'Icinga ne parle que HTTPS »** : saisissez `https://`, ou rien
+  devant l'adresse.
+- **« Permission manquante pour l'utilisateur d'API »** ou **« aucun hôte
+  visible »** : ajoutez les permissions de l'étape 1 à l'objet `ApiUser`, puis
+  rechargez Icinga. Une permission avec un `filter` peut aussi cacher tous les
+  hôtes.
+- **« Certificat refusé »** : cochez « Accepter les certificats auto-signés ».
+- **Un hôte manque** : il n'est dans aucun des groupes d'hôtes de la
+  configuration.
+- **L'acquittement est refusé** : l'utilisateur d'API a besoin de la
+  permission `actions/acknowledge-problem`.
+
+## Limites
+
+- Une seule instance Icinga 2 par intégration (en cluster, l'adresse d'un
+  master : il voit tous les hôtes de ses zones).
+- États des hôtes et des services seulement : ni métriques, ni données de
+  performance.
+- L'intégration lit Icinga à l'intervalle choisi : un événement qui apparaît
+  et disparaît entre deux lectures est manqué. Le flux `/v1/events` n'est pas
+  utilisé.
+- « Un service revient OK » se déclenche aussi quand un service en problème
+  est retiré de la supervision ; un hôte retiré d'Icinga ou du périmètre
+  disparaît sans signal.
+- 30 événements de scène au plus par lecture : une panne réseau peut en lever
+  des dizaines d'un coup ; le reste suit aux lectures suivantes.
+- Pas de quota sur l'API REST : chaque lecture envoie deux requêtes (trois une
+  fois par heure, pour la version).
+
+Sans lien avec le projet Icinga ni avec Icinga GmbH.

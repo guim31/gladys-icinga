@@ -16,8 +16,8 @@ its only runtime dependency. It started from the official JavaScript template.
 ```bash
 npm install
 npm test                                  # node --test, the built-in runner
-node --test test/devices.test.js          # one file
-node --test --test-name-pattern "plug"    # tests whose name matches
+node --test test/hub.test.js              # one file
+node --test --test-name-pattern "widget"  # tests whose name matches
 npm run lint                              # ESLint
 npm run format:check                      # Prettier, as the CI runs it
 npm run format                            # Prettier, fix in place
@@ -31,16 +31,22 @@ pushing.
 ## Architecture
 
 ```
-index.js                          SDK wiring only: handlers registered before connect()
-src/devices/index.js              registry of the device blueprints + dispatch helpers
-src/devices/<type>.js             one device type per file (buildDevice, onPoll, onSetValue...)
+index.js                          SDK wiring only: src/app.js registers the handlers before connect()
+src/app.js                        every SDK handler -> the hub (also used by the tests)
+src/hub.js                        reading timer, states (changes + heartbeat), scene events, views
+src/devices.js                    host and "Icinga" devices, feature names (4 languages), values
+src/icinga/client.js              REST API: version, hosts, services not OK, host groups, acknowledge
+src/icinga/http.js                node:http/https GET/POST (Icinga's own CA accepted on request)
 src/scenes.js                     scene action handlers (manifest `scene_actions`)
-src/widgets.js                    dashboard widget handlers (manifest `widgets`)
+src/widgets.js                    dashboard widget `problems` (manifest `widgets`)
+src/texts.js                      connection, error, report, action texts (4 languages)
 src/config.js                     DEFAULT_CONFIG (mirrors the manifest defaults) + normalization
-src/weather.js                    example driver (Open-Meteo)
-gladys-assistant-integration.json manifest: name, config_schema, actions, image...
-docs/en.md, docs/fr.md            user documentation, re-hosted by Gladys (mandatory)
+src/store.js                      /data/icinga-state.json (the problems already seen)
+src/logs.js                       repeated failures logged once, then once when they heal
+gladys-assistant-integration.json manifest: name, config_schema, actions, triggers, widget...
+docs/{en,fr,de,es}.md             user documentation, re-hosted by Gladys (en and fr mandatory)
 test/                             node --test, against the SDK's fake Gladys (integration-sdk/testing)
+                                  and helpers/fakeIcinga.js (real answers in test/fixtures/icinga)
 .github/scripts/release.mjs       release helpers (manifest bump, changelog), tested in test/
 ```
 
@@ -70,8 +76,9 @@ test/                             node --test, against the SDK's fake Gladys (in
   `type: "provider"`: 5.1.0). `test/manifest.test.js` ties the manifest to the
   code (defaults, action, scene and widget handlers): change both sides
   together.
-- **User-facing text** is bilingual (English and French): action messages,
-  manifest texts, and `docs/en.md` / `docs/fr.md`, kept in sync.
+- **User-facing text** exists in English, French, German and Spanish: action
+  messages, widget texts, feature names, manifest texts, and
+  `docs/{en,fr,de,es}.md`, kept in sync (`test/i18n.test.js`).
 - **Style.** Prettier formats, ESLint catches mistakes. Comments explain why,
   in English. Tests never touch the network.
 
@@ -233,3 +240,77 @@ long, et sur un « Sie »/« Ihr… » de politesse en allemand. Le store exige 
 - Docs `en`, `fr`, `de`, `es` avec les mêmes sections.
 - Chauffe, ouverture, sécurité : ne rien rendre pilotable « comme un thermostat » ou par un assistant
   vocal quand une erreur serait dangereuse (leçon d'OctoPrint).
+
+## Icinga 2 (propre à ce dépôt)
+
+Logique reprise au plus près de gladys-checkmk (hub, événements, widget, actions) : seules
+l'API et ses pièges changent.
+
+- **API** : REST d'Icinga 2, `https://<hôte>:5665/v1`, **TLS seulement** (un `http://` sur le
+  port 5665 : la connexion est coupée, `curl` rend `000` ; erreur `https_required`), certificat
+  signé par la CA interne d'Icinga (nom = nom du nœud) : « Accepter les certificats auto-signés »
+  est **coché par défaut**. Utilisateur `ApiUser` en Basic auth. Adresse : `https://` et le port
+  5665 ajoutés s'ils manquent (le port est lu dans le texte saisi : `URL` efface `:443`) ; tout ce
+  qui précède `/v1` est un préfixe de proxy inverse.
+- **Erreurs** (relevées en réel) : JSON `{ "error": <code>, "status": "<texte>" }`. 401
+  « Unauthorized », 403 « Missing permission: <permission> » (`permission`), 404 « No objects
+  found. » pour une action sans objet (traité comme 0 résultat). Une réponse non JSON (Icinga Web
+  sur 80/443) : `not_icinga`. Un filtre mal encodé dans l'URL : 500 « Unhandled exception ».
+- **Piège payé : `+` dans l'URL**. Icinga ne décode pas un `+` en espace : `URLSearchParams`
+  envoie `service.state+!=+0`, qui ne trouve rien, et Icinga répond **404 « No objects found. »**,
+  la même réponse que quand tous les services sont OK. Résultat : zéro service en problème, sans
+  erreur (vu en réel, invisible avec un faux trop poli). Encoder chaque paramètre par
+  `encodeURIComponent` (`%20`) ; le faux de test décode comme Icinga et répond 404 à un filtre
+  inconnu ou à une liste vide.
+- **Lecture** : `GET objects/hosts` et `GET objects/services?filter=service.state != 0` avec
+  `attrs` répétés. `status/IcingaApplication` donne la version (`v2.16.5`) mais exige
+  `status/query` : sans elle, version inconnue, pas d'erreur. Aucun hôte visible : erreur
+  `no_hosts` (permission manquante ou filtrée), les données précédentes restent, aucun événement.
+- **Pièges des états** (vus en réel, v2.16.5) :
+  - un hôte **jamais vérifié** répond `state: 1` (DOWN) avec `last_check: -1` et
+    `last_check_result: null` : c'est **PENDING**, rien publié pour « Hôte UP » ; un service jamais
+    vérifié répond `state: 3` (UNKNOWN) : écarté (sinon faux UNKNOWN au démarrage) ;
+  - Icinga 2 n'a que **UP/DOWN** pour un hôte : UNREACHABLE = DOWN avec `last_reachable: false`
+    (dépendance vers un parent tombé). Un hôte injoignable passe **HARD aussitôt** ;
+  - `acknowledgement` vaut 0, 1 (normal) ou 2 (sticky) : tester `> 0` ; `downtime_depth` idem ;
+  - `last_state_change` vaut souvent **0** (état jamais changé depuis la création) : durée 0 ;
+  - `display_name` sert à l'affichage, `name` (objet, `hôte!service` côté API) aux clés et aux
+    actions : la clé d'un service dans `/data` est `hôte\n<nom d'objet>`, un renommage
+    d'affichage ne crée pas de faux événement (test) ;
+  - la sortie d'un check peut tenir sur plusieurs lignes : seule la première est gardée.
+- **Acquittement** : `POST actions/acknowledge-problem` avec `filter` et `filter_vars` (vérifié :
+  `host.name == h && service.name in names`), `sticky: true`, `notify: false`, auteur « Gladys ».
+  Une requête pour l'hôte, une pour ses services ; la réponse liste un résultat par objet (`code`
+  200, ou **409** « is UP » / « is already acknowledged », alors code HTTP global 409) : seuls les
+  200 comptent. 403 sans `actions/acknowledge-problem`.
+- **Flux `/v1/events` non utilisé** : l'interrogation suffit (30 s à 5 min), reprend sans logique
+  de rejeu après un redémarrage et ne demande pas la permission `events/*`. Choix de la session du
+  20/10/2026.
+- **Périmètre** : groupes d'hôtes (`groups`), filtrés côté intégration, sans casse ; un hôte dans
+  l'un d'eux est retenu. Le mot de passe n'en fait pas partie (seul l'utilisateur, haché).
+
+## Vérifié sur un vrai Icinga 2 (20/10/2026)
+
+Image officielle `icinga/icinga2` **v2.16.5** (`ICINGA_MASTER=1`), réseau en pont
+`gladys-test-icinga`, aucun port publié, utilisateur d'API limité à `objects/query/Host`,
+`objects/query/Service`, `status/query`, `actions/acknowledge-problem`. Hôtes à checks `dummy`
+pilotés par variables (`max_check_attempts = 2` pour voir SOFT puis HARD), un hôte `hostalive`
+vers une adresse de documentation (DOWN), un hôte derrière lui par `Dependency` (UNREACHABLE), un
+hôte en downtime avec ses services, un hôte et un service sans check actif (PENDING). Réponses
+gardées dans `test/fixtures/icinga/icinga-2.16.5.json` (l'hôte d'exemple de l'image retiré).
+
+Image de l'intégration avec les contraintes du bac à sable (`--cap-drop ALL --security-opt
+no-new-privileges --read-only --memory 256m --pids-limit 256`, volume `/data`, aucun port publié) :
+
+- Sans Gladys : reconnexion du SDK, pas de plantage, aucun secret dans les logs, ~19 Mo au repos,
+  arrêt propre sur SIGTERM (code 0).
+- Faux Gladys du SDK dans le conteneur verrouillé, contre le vrai Icinga : découverte (8
+  appareils), états, « Tester la connexion », widget, `get_problems` ; `service_problem` seulement
+  au passage HARD (rien à l'état SOFT), `service_recovered`, `host_down`, `host_up` ; acquittement
+  de l'hôte et de son service (commentaires d'auteur « Gladys » relus dans Icinga), puis 0 au
+  second appel ; mot de passe refusé (`auth`), utilisateur sans `actions/acknowledge-problem`
+  (403, message clair) ni `status/query` (version inconnue, lecture normale), `http://`
+  (`ECONNRESET` → `https_required`), port fermé (`unreachable`), certificat strict
+  (`SELF_SIGNED_CERT_IN_CHAIN` → `tls`).
+- Non vérifié en réel : Icinga 2 avant 2.16, cluster à plusieurs zones, proxy inverse,
+  permissions à `filter`.
