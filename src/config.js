@@ -59,7 +59,7 @@ export function parseApiUrl(raw) {
     return null;
   }
   // URL drops a default port (443): read the typed authority instead.
-  const authority = withScheme.split('/')[2] ?? '';
+  const authority = (withScheme.split('/')[2] ?? '').split(/[?#]/)[0];
   if (!/:\d+$/.test(authority)) {
     url.port = DEFAULT_PORT;
   }

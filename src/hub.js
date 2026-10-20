@@ -331,6 +331,7 @@ export class IcingaHub {
     // problem, reported by the connection status.
     if (err.kind !== ERROR_KINDS.UNREACHABLE) {
       this.failures = 0;
+      this.down = false; // a later outage is announced again
       return wasError !== err.kind;
     }
     this.failures += 1;
@@ -372,6 +373,7 @@ export class IcingaHub {
    * after a change of scope) are recorded, not announced.
    */
   async transitions() {
+    const { generation } = this;
     const { hosts: knownHosts, services: knownServices, primed } = this.saved;
     const now = this.now();
     const events = [];
@@ -383,7 +385,9 @@ export class IcingaHub {
       let entry = knownHosts[host.name];
       if (isDown(host)) {
         if (!entry) {
-          entry = { state: host.state, since: host.since, announced: !primed };
+          // Icinga says 0 for a state unchanged since the object was created:
+          // count from now, so "back up after N minutes" is not always 0.
+          entry = { state: host.state, since: host.since || now / 1000, announced: !primed };
           knownHosts[host.name] = entry;
         }
         entry.state = host.state;
@@ -418,7 +422,7 @@ export class IcingaHub {
           service: service.service,
           name: service.name,
           state: service.state,
-          since: service.since,
+          since: service.since || now / 1000,
           // The state announced last; 0: none yet.
           announced: primed ? 0 : service.state,
         };
@@ -426,6 +430,7 @@ export class IcingaHub {
       }
       entry.state = service.state;
       entry.output = service.output;
+      entry.service = service.service; // the display name may change meanwhile
       if (entry.announced !== service.state && !service.downtime) {
         events.push({ key: TRIGGERS.SERVICE_PROBLEM, service, entry });
       }
@@ -447,6 +452,9 @@ export class IcingaHub {
       logger.warn(`${events.length - sent.length} change(s) left for the next read`);
     }
     for (const event of sent) {
+      if (generation !== this.generation) {
+        break; // reconfigured meanwhile: these events belong to the old scope
+      }
       const data = this.eventData(event, now);
       logger.debug(`${event.key} on ${data.host}${data.service ? ` / ${data.service}` : ''}`);
       if (!(await this.fireEvent(event.key, data))) {

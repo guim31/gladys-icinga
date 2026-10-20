@@ -23,6 +23,7 @@ test('the address, with or without scheme, port or API path, gives the REST API 
     'https://monitoring.example.com:443/icinga-api/v1':
       'https://monitoring.example.com/icinga-api/v1',
     'http://192.0.2.5:8080': 'http://192.0.2.5:8080/v1',
+    'https://192.0.2.5:443?x=1': 'https://192.0.2.5/v1',
   };
   for (const [typed, expected] of Object.entries(cases)) {
     assert.equal(parseApiUrl(typed), expected, typed);

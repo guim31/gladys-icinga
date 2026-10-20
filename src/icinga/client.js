@@ -182,6 +182,10 @@ export class IcingaClient {
       // A reverse proxy in front of a stopped Icinga.
       throw new IcingaError(ERROR_KINDS.UNREACHABLE, `HTTP ${status}`, { status });
     }
+    if (status === 401) {
+      // Also a reverse proxy with its own Basic auth, answering in HTML.
+      throw new IcingaError(ERROR_KINDS.AUTH, `Refused (HTTP 401)`, { status });
+    }
     let parsed;
     try {
       parsed = JSON.parse(response.body);
@@ -198,9 +202,6 @@ export class IcingaClient {
       );
     }
     const detail = typeof parsed.status === 'string' ? parsed.status : '';
-    if (status === 401) {
-      throw new IcingaError(ERROR_KINDS.AUTH, `Refused (HTTP 401)`, { status });
-    }
     if (status === 403) {
       // "Missing permission: actions/acknowledge-problem"
       throw new IcingaError(ERROR_KINDS.PERMISSION, `${method} ${path}: ${detail} (HTTP 403)`, {

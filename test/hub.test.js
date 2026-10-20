@@ -443,3 +443,34 @@ test('a new password for the same user keeps the problems already seen', async (
   await w.hub.pollAll();
   assert.deepEqual(keysOf(w), [TRIGGERS.SERVICE_PROBLEM, TRIGGERS.SERVICE_RECOVERED]);
 });
+
+test('a host down since its creation (last_state_change 0) still gets a duration', async (t) => {
+  const clock = createClock();
+  const w = await world(t, { clock });
+  clock.advance(3 * 3600_000);
+  w.icinga.setHost('deadhost', 0);
+  await w.hub.pollAll();
+  assert.equal(w.fake.sceneEvents[0].data.duration_minutes, 180);
+});
+
+test('a recovery carries the current display name of the service', async (t) => {
+  const w = await world(t);
+  w.icinga.service('nas', 'backup').display_name = 'Backup job';
+  await w.hub.pollAll();
+  w.icinga.setService('nas', 'backup', 0);
+  await w.hub.pollAll();
+  assert.equal(w.fake.sceneEvents[0].data.service, 'Backup job');
+});
+
+test('an outage after another kind of error is announced again', async (t) => {
+  const w = await world(t);
+  w.icinga.failure = 'down';
+  await w.hub.pollAll();
+  await w.hub.pollAll();
+  w.icinga.failure = 'not_icinga';
+  await w.hub.pollAll();
+  w.icinga.failure = 'down';
+  await w.hub.pollAll();
+  await w.hub.pollAll();
+  assert.deepEqual(keysOf(w), [TRIGGERS.UNREACHABLE, TRIGGERS.UNREACHABLE]);
+});

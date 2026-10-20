@@ -139,6 +139,26 @@ test('errors: credentials, permissions, no host, not Icinga, unreachable, TLS, h
   icinga.failure = 'down';
   await rejectsWith(clientFor(icinga).snapshot(), ERROR_KINDS.UNREACHABLE);
 
+  await rejectsWith(
+    clientFor(icinga, {
+      request: async () => ({ status: 401, headers: {}, body: '<html>Proxy login</html>' }),
+    }).snapshot(),
+    ERROR_KINDS.AUTH,
+  );
+  // Spaces travel as %20: Icinga does not decode `+`.
+  const sent = [];
+  await clientFor(icinga, {
+    request: (url, request) => {
+      sent.push(url);
+      return new FakeIcinga().request(url, request);
+    },
+  }).snapshot();
+  assert.ok(
+    sent.some((url) => url.includes('filter=service.state%20!%3D%200')),
+    sent.join('\n'),
+  );
+  assert.ok(sent.every((url) => !url.includes('+')));
+
   const failing = (code) => async () => {
     throw Object.assign(new Error(code), { code });
   };
