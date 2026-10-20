@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-20
+
 ### Added
 
 - One device per Icinga 2 host (every host the API user sees, or the hosts of
@@ -28,3 +30,6 @@ the notes of the version's GitHub Release.
 - Icinga 2 REST API with an API user (Basic auth), Icinga's own certificate
   accepted by default; feature names, messages and documentation in English,
   French, German and Spanish.
+
+[Unreleased]: https://github.com/guim31/gladys-icinga/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/guim31/gladys-icinga/releases/tag/v1.0.0
