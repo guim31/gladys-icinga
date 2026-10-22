@@ -1,6 +1,6 @@
 {
   "name": "gladys-icinga",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Gladys Assistant integration for Icinga 2: hosts and services as devices, scene triggers when a host goes down or a service fails, acknowledgement from scenes, a dashboard widget.",
   "type": "module",
